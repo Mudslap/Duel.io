@@ -1,0 +1,1460 @@
+<html>
+	<head>
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+		<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+		<style>
+			*{
+				padding: 0;
+				margin: 0;
+				font-family: 'DotGothic16', sans-serif;
+			}
+			#canvas{
+				width: 900px;
+				height: 900px;
+				position: absolute;
+				left: 50%;
+				top: 50%;
+				transform: translate(-50%, -50%);
+				background-color: white;
+				cursor: url(img/crosshair.png), auto;
+			}
+			body{
+				background-color: black;
+			}
+			.hide{
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<img src="img/pistol.png" id="pistol" class="hide">
+		<img src="img/ammo.png" id="ammo" class="hide">
+		<img src="img/medkit.png" id="medkit" class="hide">
+		<img src="img/coin.png" id="coin" class="hide">
+		<img src="img/stamina.png" id="stamina" class="hide">
+		<img src="img/heart.png" id="healthIcon" class="hide">
+		<img src="img/water.png" id="water" class="hide">
+		<img src="img/Bush.png" id="bush" class="hide">
+		<img src="img/grass.png" id="grass" class='hide'>
+		<img src="img/cloud.png" id="cloud" class="hide">
+		<img src="img/trees.png" id="trees" class="hide">
+		
+		<img src="img/100win.png" id="100played" class="hide">
+		<img src="img/500win.png" id="500played" class="hide">
+		<img src="img/1000win.png" id="1000played" class="hide">
+		<img src="img/5000coins.png" id="5000coins" class="hide">
+		<img src="img/10000win.png" id="10000win" class="hide">
+		<script>
+			//basic formatting for canvas
+			var canvas = document.getElementById("canvas");
+			var ctx = canvas.getContext("2d");
+			let rect = canvas.getBoundingClientRect();
+			canvas.width = rect.width * devicePixelRatio;
+			canvas.height = rect.height * devicePixelRatio;
+			ctx.scale(devicePixelRatio, devicePixelRatio);
+			canvas.style.width = rect.width + 'px';
+			canvas.style.height = rect.height + 'px';
+			
+			//images
+			var pistol = document.getElementById("pistol");
+			var medkit = document.getElementById("medkit");
+			var ammo = document.getElementById("ammo");
+			var coin = document.getElementById("coin");
+			var stamina = document.getElementById("stamina");
+			var heartIcon = document.getElementById("healthIcon");
+			var water = document.getElementById("water");
+			var bushes = document.getElementById("bush");
+			var trees = document.getElementById("trees");
+			
+			var gp1 = document.getElementById("100played");
+			var gp2 = document.getElementById("500played");
+			var gp3 = document.getElementById("1000played");
+			var gc1 = document.getElementById("5000coins");
+			var gw1 = document.getElementById("10000win");
+			
+			//patterns
+			var gp1Pat = ctx.createPattern(gp1, "repeat");
+			var gp2Pat = ctx.createPattern(gp2, "repeat");
+			var gp3Pat = ctx.createPattern(gp3, "repeat");
+			var gc1Pat = ctx.createPattern(gc1, "repeat");
+			var gw1Pat = ctx.createPattern(gw1, "repeat");
+			
+			//object values
+			var character = {
+				x: 450-25,
+				y: 450-25,
+				width: 50,
+				height: 50,
+				color: "yellow",
+				speed: 2,
+				bullets: 20,
+				health: 100,
+				stamina: 100,
+				healthColor: "green",
+				xp: 5,
+				level: 0
+			}
+			var island = {
+				x: -1125,
+				y: -450,
+				width: 1800,
+				height: 1800
+			}
+			var pistols = {
+				x: character.x + character.width,
+				y: character.y,
+				width: 50,
+				height: 50,
+			}
+			var enemy = {
+				x: 200,
+				y: 900-25,
+				width: 50,
+				height: 50,
+				color: "blue",
+				speed: 2,
+				bullets: 20,
+				health: 100,
+				stamina: 100,
+				healthColor: "green"
+			}
+			var epistols = {
+				x: island.x + enemy.x + enemy.width,
+				y: island.y + enemy.y + enemy.height,
+				width: 50,
+				height: 50,
+			}
+			
+			//variables
+			keys = [];
+			var moveleft = true;
+			var moveright = true;
+			var moveup = true;
+			var movedown = true;
+			var mouseX = character.x + character.width/2;
+			var mouseY = character.y + character.height/2;
+			var bulletSpeed = 5;
+			var totalCoins = 0;
+			var gameCoins = 0;
+			
+			//character functions
+			function drawCharacter(){
+				ctx.fillStyle = "black";
+				ctx.fillRect(character.x - 3, character.y - 3, character.width + 6, character.height + 6);
+				ctx.fillStyle = character.color;
+				ctx.fillRect(character.x, character.y, character.width, character.height);
+				if(character.color == "#964B00"){
+					ctx.drawImage(gp1, character.x, character.y);
+				}
+				if(character.color == "#b9f2ff"){
+					ctx.drawImage(gc1, character.x, character.y);
+				}
+				if(character.color == "silver"){
+					ctx.drawImage(gp2, character.x, character.y);
+				}
+				if(character.color == "white"){
+					ctx.drawImage(gw1, character.x, character.y);
+				}
+				if(character.color == "gold"){
+					ctx.drawImage(gp3, character.x, character.y);
+				}
+			}
+			function characterMovement(){
+				if(character.x <= island.x){
+					character.x = island.x;
+					moveleft = false;
+				}
+				else{
+					moveleft = true;
+				}
+				if(keys[65] && moveleft){
+					island.x += character.speed;
+				}
+				
+				if(character.x + character.width >= island.x + island.width){
+					character.x = island.x + island.width - character.width;
+					moveright = false;
+				}
+				else{
+					moveright = true;
+				}
+				if(keys[68] && moveright){
+					island.x -= character.speed;
+				}
+				
+				if(character.y <= island.y){
+					character.y = island.y;
+					moveup = false;
+				}
+				else{
+					moveup = true;
+				}
+				if(keys[87] && moveup){
+					island.y += character.speed;
+				}
+				
+				if(character.y + character.height >= island.y + island.height){
+					character.y = island.y + island.height - character.height;
+					movedown = false;
+				}
+				else{
+					movedown = true;
+				}
+				if(keys[83] && movedown){
+					island.y -= character.speed;
+				}
+			}
+			function drawBackground(){
+				var waterPat = ctx.createPattern(water, "repeat");
+				ctx.fillStyle = waterPat;
+				ctx.fillRect(0, 0, 900, 900);
+				
+				ctx.fillStyle = "#DCCA98";
+				ctx.fillRect(island.x, island.y, island.width, island.height);
+				ctx.fillStyle = "#D2B48C";
+				ctx.fillRect(island.x + 50, island.y+50, island.width-100, island.height-100);
+			}
+			treeList = [];
+			bushList = [];
+			function generateForeGround(){
+				for(var t=0; t < 20; t++){
+					var tX = Math.floor(Math.random() * 1730);
+					var tY = Math.floor(Math.random() * 1730);
+					treeList.push([tX, tY]);
+				}
+				for(var s=0; s < 20; s++){
+					var sX = Math.floor(Math.random() * 1700);
+					var sY = Math.floor(Math.random() * 1750);
+					bushList.push([sX, sY]);
+				}
+			}
+			function drawForeGround(){
+				for(var bs=0; bs < treeList.length; bs++){
+					ctx.drawImage(bushes, island.x + bushList[bs][0], island.y + bushList[bs][1]);
+				}
+				for(var tr=0; tr < treeList.length; tr++){
+					ctx.drawImage(trees, island.x + treeList[tr][0], island.y + treeList[tr][1]);
+				}
+			}
+			var gameMessage = "MATCH STARTS IN...";
+			var gameMessageColor = "black";
+			function UI(){
+				ctx.fillStyle = "black";
+				ctx.fillRect(5,5,164,164);
+				ctx.fillStyle = "#DCCA98";
+				ctx.fillRect(8, 8, 158, 158);
+				ctx.fillStyle = "#D2B48C";
+				ctx.fillRect(20, 20, 134, 134);
+				ctx.fillStyle = enemy.color;
+				
+				ctx.fillRect(Math.abs(enemy.x)/12 + 8, Math.abs(enemy.y)/12 + 8, 12, 12);
+				if(medX > -100 && medY > -100){
+					ctx.drawImage(medkit, Math.abs(medX)/12 + 8, Math.abs(medY)/12 + 8, 12, 12);
+				}
+				if(ammoX > -100 && ammoY > -100){
+					ctx.drawImage(ammo, Math.abs(ammoX)/12 + 8, Math.abs(ammoY)/12 + 8, 12, 12);
+				}
+				if(coinX > -100 && coinY > -100){
+					ctx.drawImage(coin, Math.abs(coinX)/12 + 8, Math.abs(coinY)/12 + 8, 12, 12);
+				}
+				ctx.fillStyle = character.color;
+				ctx.fillRect(Math.abs(island.x - character.x)/12 + 8, Math.abs(island.y - character.y)/12 + 8, 12, 12);
+				
+				ctx.fillStyle = "black";
+				ctx.fillRect(174, 5, 206, 66);
+				character.healthColor = "#ffcccb";
+				ctx.fillStyle = character.healthColor;
+				ctx.fillRect(177, 8, character.health * 2, 60);
+				ctx.drawImage(heartIcon,182,13,50,50);
+				
+				ctx.fillStyle = "black";
+				ctx.fillRect(174, 76, 206, 66);
+				ctx.fillStyle = "orange";
+				ctx.fillRect(177, 79, character.stamina * 2, 60);
+				ctx.drawImage(stamina,182,84,50,50);
+				
+				ctx.textAlign = "left";
+				ctx.drawImage(ammo, 5, 174, ammo.width/2.5, ammo.height/2.5);
+				ctx.fillStyle = "black";
+				ctx.font = "30px DotGothic16";
+				ctx.fillText(character.bullets, 50, 206);
+				
+				ctx.drawImage(coin, 95, 177, coin.width/2, coin.height/2);
+				ctx.fillStyle = "black";
+				ctx.font = "30px DotGothic16";
+				ctx.fillText(gameCoins, 140, 206);
+				
+				ctx.textAlign = "center";
+				ctx.font = "50px DotGothic16";
+				ctx.fillStyle = gameMessageColor;
+				ctx.fillText(gameMessage, 450, 200);
+			}
+			function levelUp(){
+				if(character.xp >= 150){
+					character.level += 1;
+					character.xp = character.xp - 150;
+				}
+			}
+			function dash(){
+				if(character.stamina > 0 && keys[16]){
+					character.speed = 4;
+					character.stamina -= 1;
+				}
+				if(character.stamina <= 0 && keys[16]){
+					character.stamina = 0;
+					character.speed = 2;
+				}
+				if(character.stamina < 100 && keys[16] == false){
+					character.speed = 2;
+					character.stamina += 0.3;
+				}
+				if(character.stamina >= 100){
+					character.stamina = 100;
+				}
+			}
+			
+			//enemy funtions
+			function drawEnemy(){
+				ctx.fillStyle = "black";
+				ctx.fillRect(island.x+enemy.x - 3, island.y+enemy.y - 3, enemy.width + 6, enemy.height + 6);
+				ctx.fillStyle = enemy.color;
+				ctx.fillRect(island.x + enemy.x, island.y + enemy.y, enemy.width, enemy.height);
+			}
+			function enemyHealth(){
+				if(enemy.health < 80){
+					enemy.healthColor = "yellow";
+				}
+				if(enemy.health < 60){
+					enemy.healthColor = "orange";
+				}
+				if(enemy.health < 40){
+					enemy.healthColor = "red";
+				}
+				if(enemy.health < 100){
+					ctx.fillStyle = "black";
+					var healthBarX = (island.x + enemy.x) + (enemy.width/2) - 53;
+					var healthBarY = (island.y + enemy.y) - 49;
+					ctx.fillRect(healthBarX, healthBarY, 106, 46);
+					ctx.fillStyle = enemy.healthColor;
+					ctx.fillRect(healthBarX + 3, healthBarY + 3, enemy.health, 40);
+				}
+			}
+			var moveDone = true;
+			var enemyTargX;
+			var enemyTargY;
+			var lookHealth = false;
+			var lookAmmo = false;
+			function enemyMovement(){
+				if(moveDone){
+					enemyTargX = Math.floor(Math.random() * 1749);
+					enemyTargY = Math.floor(Math.random() * 1749);
+					if(enemyTargX % 2 == 1){
+						enemyTargX += 1;
+					}
+					if(enemyTargY % 2 == 1){
+						enemyTargX += 1;
+					}
+					moveDone = false;
+				}
+				if(enemy.health < 50 && medX > -100 && medY > -100){
+					enemyTargX = medX;
+					enemyTargY = medY;
+				}
+				if(enemy.ammo < 5 && ammoX > -100 && ammoY > -100){
+					enemyTargX = ammoX;
+					enemyTargY = ammoY;
+				}
+				if(enemy.x < enemyTargX){
+					enemy.x += 2;
+				}
+				if(enemy.x > enemyTargX){
+					enemy.x -= 2;
+				}
+				if(enemy.y < enemyTargY){
+					enemy.y += 2;
+				}
+				if(enemy.y > enemyTargY){
+					enemy.y -= 2;
+				}
+				if(Math.abs(enemy.y - enemyTargY) == 1 && Math.abs(enemy.x - enemyTargX) == 1 || Math.abs(enemy.y - enemyTargY) == 0 && Math.abs(enemy.x - enemyTargX) == 1 || Math.abs(enemy.y - enemyTargY) == 1 && Math.abs(enemy.x - enemyTargX) == 0){
+					moveDone = true;
+				}
+				if(enemy.x == enemyTargX && enemy.y == enemyTargY){
+					moveDone = true;
+				}
+			}
+			
+			//player gun
+			var enemyRotateAngle = 0;
+			enemyBullets = [];
+			function rotateEnemyGun(){
+				ctx.save();
+				ctx.translate(island.x+enemy.x+enemy.width/2, island.y+enemy.y+enemy.height/2);
+				ctx.rotate(enemyRotateAngle);
+				epistols.x = enemy.width/2;
+				epistols.y = enemy.height/2;
+				ctx.drawImage(pistol, epistols.x, epistols.y);
+				ctx.restore();
+			}
+			function enemyShoot(){
+				var enemyShootNum = Math.floor(Math.random() * 700);
+				if(enemyShootNum == 1 && enemy.bullets > 0){					
+					var bulletSX = enemyNegRec.x;
+					var bulletSY = enemyNegRec.y;
+					var bulletEX = character.x + Math.floor(Math.random() * 10);
+					var bulletsEY = character.y + Math.floor(Math.random() * 10);	
+					var bulletsKill = false;
+					enemyBullets.push([bulletSX, bulletSY, bulletEX, bulletsEY, bulletsKill]);
+					if(enemy.bullets > 0){
+						enemy.bullets -= 1;	
+					}
+				}
+				for(var i=0; i < enemyBullets.length; i++){
+					if(enemyBullets[i][4] == false){
+						ctx.fillStyle = "red";
+						ctx.fillRect(enemyBullets[i][0], enemyBullets[i][1], 6, 6);
+						var tx = enemyBullets[i][2] - enemyBullets[i][0];
+						var ty = enemyBullets[i][3] - enemyBullets[i][1];
+						var dist = Math.sqrt(tx*tx + ty*ty);
+						if (dist >= bulletSpeed) {
+							var velX = (tx / dist) * bulletSpeed;
+							var velY = (ty / dist) * bulletSpeed;
+							enemyBullets[i][0] += velX;
+							enemyBullets[i][1] += velY;
+						}
+						if((dist <= bulletSpeed)){
+							enemyBullets[i][0] = -10000;
+							enemyBullets[i][1] = -10000;
+							enemyBullets[i][4] = true;
+							character.health -= 10;
+						}
+					}
+				}
+			}
+			function enemyDetectBullets(){
+				for(var b=0; b < enemyBullets.length; b++){
+					if(enemyBullets[b][0] <= character.x + character.width && enemyBullets[b][0] + 6 >= character.x && enemyBullets[b][1] <= character.y + character.height && enemyBullets[b][1] + 6 >= character){
+						enemyBullets[b][0] = -10000;
+						enemyBullets[b][1] = -10000;
+						enemyBullets[b][4] = true;
+						character.health -= 10;
+					}
+				}
+			}
+			
+			//pickups and items
+			var showMedkit = false;
+			var medX;
+			var medY;
+			function generateMedkit(){
+				if(showMedkit == false){
+					var medNum = Math.floor(Math.random() * 1000);
+				}
+				if(medNum == 1){
+					medX = Math.abs(Math.floor(Math.random() * 1750));
+					medY = Math.abs(Math.floor(Math.random() * 1750));
+					showMedkit = true;
+				}
+				if(showMedkit == true){
+					ctx.drawImage(medkit, island.x + medX, island.y + medY, medkit.width/2, medkit.height/2);
+				}
+			}
+			var showAmmo = false;
+			var ammoX;
+			var ammoY;
+			function generateAmmo(){
+				if(showAmmo == false){
+					var ammoNum = Math.floor(Math.random() * 1000);
+				}
+				if(ammoNum == 1){
+					ammoX = Math.abs(Math.floor(Math.random() * 1750));
+					ammoY = Math.abs(Math.floor(Math.random() * 1750));
+					showAmmo = true;
+				}
+				if(showAmmo == true){
+					ctx.drawImage(ammo, island.x + ammoX, island.y + ammoY, ammo.width/2, ammo.height/2);
+				}
+			}
+			var showCoin = false;
+			var coinX;
+			var coinY;
+			function generateCoin(){
+				if(showCoin == false){
+					var coinNum = Math.floor(Math.random() * 1000);
+				}
+				if(coinNum == 1){
+					coinX = Math.abs(Math.floor(Math.random() * 1750));
+					coinY = Math.abs(Math.floor(Math.random() * 1750));
+					showCoin = true;
+				}
+				if(showCoin == true){
+					ctx.drawImage(coin, island.x + coinX, island.y + coinY, coin.width/2, coin.height/2);
+				}
+			}
+			function overlaps(aX, aY, aW, aH, bX, bY, bW, bH,) {
+				var ax1 = aX;
+				var ay1 = aY;
+				var ax2 = aX + aW;
+				var ay2 = aY + aH;
+				
+				var bx1 = bX;
+				var by1 = bY;
+				var bx2 = bX + bW;
+				var by2 = bY + bH;
+				
+				if (ax1 >= bx2 || bx1 >= ax2) return false;
+
+				// no vertical overlap
+				if (ay1 >= by2 || by1 >= ay2) return false;
+
+				return true;
+						}
+			function powerUps(){
+				if(coinX > -100 && coinY > -100){
+					if(overlaps(character.x, character.y, character.width, character.height, island.x + coinX, island.y + coinY, 75, 75)){
+						var addedCoins = Math.floor(Math.random() * 5) + 5;
+						gameCoins += addedCoins
+						coinX = -200;
+						coinY = -200;
+						showCoin = false;
+						gameMessageColor = "yellow";
+						gameMessage = "+" + addedCoins + " Coins";
+						setTimeout(function(){
+							gameMessageColor = "black";
+							gameMessage = "";
+						}, 2000)
+					}	
+				}
+				if(ammoX > -100 && ammoY > -100){
+					if(overlaps(character.x, character.y, character.width, character.height, island.x + ammoX, island.y + ammoY, 100, 100)){
+						character.bullets += 10;
+						ammoX = -200;
+						ammoY = -200;
+						showAmmo = false;
+						gameMessageColor = "gray";
+						gameMessage = "+10 Ammo";
+						setTimeout(function(){
+							gameMessageColor = "black";
+							gameMessage = "";
+						}, 2000)
+					}	
+				}
+				if(medX > -100 && medY > -100){
+					if(overlaps(character.x, character.y, character.width, character.height, island.x + medX, island.y + medY, 100, 100) && character.health <= 90){
+						character.health += 10;
+						medX = -200;
+						medY = -200;
+						showMedkit = false;
+						gameMessageColor = "gray";
+						gameMessage = "+10 Health";
+						setTimeout(function(){
+							gameMessageColor = "black";
+							gameMessage = "";
+						}, 2000)
+					}
+					if(overlaps(character.x, character.y, character.width, character.height, island.x + medX, island.y + medY, 100, 100) && character.health < 100 && character.health > 90){
+						character.health = 100;
+						medX = -200;
+						medY = -200;
+						showMedkit = false;
+						gameMessageColor = "gray";
+						gameMessage = "+" + (100-character.health) + "Health";
+						setTimeout(function(){
+							gameMessageColor = "black";
+							gameMessage = "";
+						}, 2000)
+					}	
+				}
+				
+				if(ammoX > -100 && ammoY > -100){
+					if(overlaps(island.x + enemy.x, island.y + enemy.y, enemy.width, enemy.height, island.x + ammoX, island.y + ammoY, 100, 100)){
+						enemy.bullets += 10;
+						ammoX = -200;
+						ammoY = -200;
+						showAmmo = false;
+					}	
+				}
+				if(medX > -100 && medY > -100){
+					if(overlaps(island.x + enemy.x, island.y + enemy.y, enemy.width, enemy.height, island.x + medX, island.y + medY, 100, 100) && enemy.health <= 90){
+						enemy.health += 10;
+						medX = -200;
+						medY = -200;
+						showMedkit = false;
+					}
+					if(overlaps(island.x + enemy.x, island.y + enemy.y, enemy.width, enemy.height, island.x + medX, island.y + medY, 100, 100) && enemy.health >= 90){
+						enemy.health += 10;
+						medX = -200;
+						medY = -200;
+						showMedkit = false;
+					}
+				}
+			}
+			
+			//player gun
+			var rotateAngle = 0;
+			bullets = [];
+			function rotate(cx, cy, x, y, angle) {
+				var radians = (Math.PI / 180) * angle,
+					cos = Math.cos(radians),
+					sin = Math.sin(radians),
+					nx = (cos * (x - cx)) + (sin * (y - cy)) + cx,
+					ny = (cos * (y - cy)) - (sin * (x - cx)) + cy;
+				return [nx, ny];
+			}
+			function rotateGun(){
+				ctx.save();
+				ctx.translate(character.x+character.width/2, character.y+character.height/2);
+				ctx.rotate(rotateAngle);
+				pistols.x = character.width/2;
+				pistols.y = character.height/2;
+				ctx.drawImage(pistol, pistols.x, pistols.y);
+				ctx.restore();
+			}
+			function findNewPoint(x, y, angle, distance) {
+				var result = {};
+
+				result.x = Math.round(Math.cos(angle * Math.PI / 180) * distance + x);
+				result.y = Math.round(Math.sin(angle * Math.PI / 180) * distance + y);
+
+				return result;
+			}
+			function shoot(){
+				if(keys[32] && character.bullets > 0){					
+					var bulletSX = negRec.x;
+					var bulletSY = negRec.y;
+					var bulletEX = mouseX;
+					var bulletsEY = mouseY;	
+					var bulletsKill = false;
+					bullets.push([bulletSX, bulletSY, bulletEX, bulletsEY, bulletsKill]);
+					keys[32] = false;
+					if(character.bullets > 0){
+						character.bullets -= 1;	
+					}
+				}
+				for(var i=0; i < bullets.length; i++){
+					if(bullets[i][4] == false){
+						ctx.fillStyle = "red";
+						ctx.fillRect(bullets[i][0], bullets[i][1], 6, 6);
+						var tx = bullets[i][2] - bullets[i][0];
+						var ty = bullets[i][3] - bullets[i][1];
+						var dist = Math.sqrt(tx*tx + ty*ty);
+						if (dist >= bulletSpeed) {
+							var velX = (tx / dist) * bulletSpeed;
+							var velY = (ty / dist) * bulletSpeed;
+							bullets[i][0] += velX;
+							bullets[i][1] += velY;
+						}
+						if((dist <= bulletSpeed)){
+							bullets[i][0] = -10000;
+							bullets[i][1] = -10000;
+							bullets[i][4] = true;
+						}
+					}
+				}
+			}
+			function detectBullets(){
+				for(var b=0; b < bullets.length; b++){
+					if(bullets[b][0] <= island.x + enemy.x + enemy.width && bullets[b][0] + 6 >= island.x + enemy.x && bullets[b][1] <= island.y + enemy.y + enemy.height && bullets[b][1] + 6 >= island.y + enemy.y){
+						bullets[b][0] = -10000;
+						bullets[b][1] = -10000;
+						bullets[b][4] = true;
+						enemy.health -= 10;
+					}
+				}
+			}
+			
+			//startmenu
+			var startGame = false;
+			var charY = 400;
+			var charX = 450-character.width/2;
+			var gamesPlayed = 0;
+			var wins = 0;
+			var loses = 0;
+			var nextGamePlayed = gamesPlayed + 1;
+			var playKeyUp = false;
+			function startMenu(){
+				if(showControls == false && showPlay == false && showLocker == false){
+					time = 0;
+					enemy.health = 100;
+					character.health = 100;
+					character.x = 450 - 25;
+					character.y = 450 - 25;
+					island.x = -1125;
+					island.y = -450;
+					enemy.x = 200;
+					enemy.y = 900-25;
+					character.bullets = 20;
+					enemy.bullets = 20;
+					character.healthColor = "green";
+					enemy.healthColor = "green";
+					totalCoins += gameCoins;
+					gameCoins = 0;
+					coinX = -1000;
+					coinY = -1000;
+					medX = -1000;
+					medY = -1000;
+					ammoX = -1000;
+					ammoY = -1000;
+					showAmmo = false;
+					showCoin = false;
+					showMedkit = false;
+					randomNum = -100;
+					statsX = 450 - 200;
+					statsY = -500;
+					textX = -1200;
+					textY = 150;
+					treeList = [];
+					bushList = [];
+
+					ctx.fillStyle = "skyblue";
+					ctx.fillRect(0,0,900,900);
+					ctx.fillStyle = "#DCCA98";
+					ctx.fillRect(0,750,900,50);
+					ctx.fillStyle = "#D2B48C";
+					ctx.fillRect(0,800,900,100);
+
+					ctx.fillStyle = "black";
+					ctx.font = "200px DotGothic16";
+					ctx.textAlign = "center";
+					ctx.fillText("DUEL.io", 450, 300);
+
+					ctx.fillStyle = "#D2B48C";
+					ctx.fillRect(600, 350, 250, 250);
+					ctx.fillStyle = "#DCCA98";
+					ctx.fillRect(625, 430, 200, 50);
+					ctx.fillStyle = character.color;
+					ctx.fillRect(625, 490, 200, 90);
+					ctx.fillStyle = "black";
+					ctx.font = "50px DotGothic16";
+					ctx.fillText("Duel", 725, 410);
+					ctx.font = "30px DotGothic16";
+					ctx.fillText("Change(c)", 725, 465);
+					ctx.fillText("PLAY!", 725, 530);
+					ctx.font = "20px DotGothic16";
+					ctx.fillText("(Press Enter)", 725, 560);
+
+					ctx.fillStyle = "#D2B48C";
+					ctx.fillRect(50, 350, 250, 280);
+					ctx.fillStyle = "black";
+					ctx.fillRect(73,388,154,24);
+					ctx.fillStyle = character.color;
+					ctx.fillRect(75,390,character.xp,20);
+					ctx.fillStyle = "black";
+					ctx.font = "25px DotGothic16";
+					ctx.fillText("LVL+", 260, 400);
+					ctx.textAlign = "left";
+					ctx.fillText("Level: " + character.level, 75, 380);
+					ctx.textAlign = "center";
+					ctx.font = "bold 25px DotGothic16";
+					ctx.fillText("Stats", 175, 450);
+					ctx.font = "25px DotGothic16";
+					ctx.textAlign = "left";
+					ctx.fillText("Coins: " + totalCoins, 75, 485);
+					ctx.fillText("Games Played: " + gamesPlayed, 75, 520);
+					ctx.fillText("Wins: " + wins, 75, 555);
+					ctx.fillText("Losses: " + loses, 75, 590);
+					
+					ctx.fillStyle = "black";
+					ctx.fillRect(charX-3, charY-3,character.width+6, character.height+6);
+					ctx.fillStyle = character.color;
+					ctx.fillRect(charX, charY,character.width, character.height);
+					if(charY <= 695){
+						charY += 5;
+					}
+					if(keys[65] || keys[37]){
+						charX -= 3;
+					}
+					if(keys[68] || keys[39]){
+						charX += 3;
+					}
+					if(charX < 0){
+						charX = 900 - character.width;
+					}
+					if(charX + character.width > 900){
+						charX = 0;
+					}
+					
+					if(character.color == "#964B00"){
+						ctx.drawImage(gp1, charX, charY);
+					}
+					if(character.color == "#b9f2ff"){
+						ctx.drawImage(gc1, charX, charY);
+					}
+					if(character.color == "silver"){
+						ctx.drawImage(gp2, charX, charY);
+					}
+					if(character.color == "white"){
+						ctx.drawImage(gw1, charX, charY);
+					}
+					if(character.color == "gold"){
+						ctx.drawImage(gp3, charX, charY);
+					}
+
+					ctx.fillStyle = "#D2B48C";
+					ctx.fillRect(140,10,200,75);
+					ctx.fillRect(350,10,200,75);
+					ctx.fillRect(560,10,200,75);
+
+					ctx.fillStyle = "#DCCA98";
+					ctx.fillRect(145,15,190,65);
+					ctx.fillRect(355,15,190,65);
+					ctx.fillRect(565,15,190,65);
+
+					ctx.fillStyle = "black";
+					ctx.textAlign = "center";
+					ctx.fillText("Locker(1)",240, 55);
+					ctx.fillText("How to Play(2)",450, 55);
+					ctx.fillText("Controls(3)",660, 55);
+
+					if(keys[13] == false){
+						playKeyUp = true;
+					}
+					if(keys[13] && playKeyUp && startGame == false && gamesPlayed >= 1){
+						startGame = true;
+						gamesPlayed += 1;
+						generateForeGround();
+					}
+					if(keys[13] && startGame == false && gamesPlayed == 0){
+						startGame = true;
+						gamesPlayed += 1;
+						generateForeGround();
+					}
+					if(keys[49]){
+						showLocker = true;
+						keys[49] = false;
+					}
+					if(keys[50]){
+						showPlay = true;
+						keys[50] = false;
+					}
+					if(keys[51]){
+						showControls = true;
+						keys[51] = false;
+					}
+				}
+				if(showLocker == true){
+					showPlay = false;
+					showControls = false;
+					locker();
+				}
+				if(showPlay == true){
+					showControls = false;
+					showLocker = false;
+					play();
+				}
+				if(showControls == true){
+					showPlay = false;
+					showLocker = false;
+					controls();
+				}
+			}
+			var time = 0 - (gamesPlayed * 1500);
+			function startMatch(){
+				console.log(time);
+				if(time < 200){
+					gameMessage = "Match Starts In...";
+				}
+				if(time > 200 && time < 400){
+					gameMessage = "3";
+				}
+				if(time > 400 && time < 600){
+					gameMessage = "2";
+				}
+				if(time > 600 && time < 800){
+					gameMessage = "1";
+				}
+				if(time > 800 && time < 1000){
+					gameMessage = "DUEL!";
+				}
+				if(time > 1000 && time < 1200){
+					gameMessage = "";
+				}
+			}
+			
+			//locker
+			var showLocker = false;
+			skinsOwned = ["#5579C6", "#1E5631", "#8B0000", "#8B0000", "#8B0000",
+			"#8B0000", "#8B0000", "#8B0000", "#8B0000", "#8B0000"];
+			function checkSkinEquipped(){
+				
+				if(keys[89] && skinsOwned[0] == "#5579C6" || keys[89] && skinsOwned[0] == "#1E5631"){
+					character.color = "yellow";
+				}
+				if(keys[66] && skinsOwned[1] == "#5579C6" || keys[66] && skinsOwned[1] == "#1E5631"){
+					character.color = "blue";
+				}
+				if(keys[82] && skinsOwned[2] == "#5579C6" || keys[82] && skinsOwned[2] == "#1E5631"){
+					character.color = "red";
+				}
+				if(keys[71] && skinsOwned[3] == "#5579C6" || keys[71] && skinsOwned[3] == "#1E5631"){
+					character.color = "forestgreen";
+				}
+				if(keys[79] && skinsOwned[4] == "#5579C6" || keys[79] && skinsOwned[4] == "#1E5631"){
+					character.color = "orange";
+				}
+				
+				if(keys[54] && skinsOwned[5] == "#5579C6" || keys[54] && skinsOwned[5] == "#1E5631"){
+					character.color = "#964B00";
+				}
+				if(keys[55] && skinsOwned[6] == "#5579C6" || keys[55] && skinsOwned[6] == "#1E5631"){
+					character.color = "#b9f2ff";
+				}
+				if(keys[56] && skinsOwned[7] == "#5579C6" || keys[56] && skinsOwned[7] == "#1E5631"){
+					character.color = "silver";
+				}
+				if(keys[57] && skinsOwned[8] == "#5579C6" || keys[57] && skinsOwned[8] == "#1E5631"){
+					character.color = "white";
+				}
+				if(keys[48] && skinsOwned[9] == "#5579C6" || keys[48] && skinsOwned[9] == "#1E5631"){
+					character.color = "gold";
+				}
+				
+				if(character.color == "yellow"){
+					for(var c = 0; c < skinsOwned.length; c++){
+						if(skinsOwned[c] == "#5579C6"){
+							skinsOwned[c] = "#1E5631";
+						}
+					}
+					skinsOwned[0] = "#5579C6";
+				}
+				if(character.color == "blue"){
+					for(var c = 0; c < skinsOwned.length; c++){
+						if(skinsOwned[c] == "#5579C6"){
+							skinsOwned[c] = "#1E5631";
+						}
+					}
+					skinsOwned[1] = "#5579C6";
+				}
+				if(character.color == "red"){
+					for(var c = 0; c < skinsOwned.length; c++){
+						if(skinsOwned[c] == "#5579C6"){
+							skinsOwned[c] = "#1E5631";
+						}
+					}
+					skinsOwned[2] = "#5579C6";
+				}
+				if(character.color == "forestgreen"){
+					for(var c = 0; c < skinsOwned.length; c++){
+						if(skinsOwned[c] == "#5579C6"){
+							skinsOwned[c] = "#1E5631";
+						}
+					}
+					skinsOwned[3] = "#5579C6";
+				}
+				if(character.color == "orange"){
+					for(var c = 0; c < skinsOwned.length; c++){
+						if(skinsOwned[c] == "#5579C6"){
+							skinsOwned[c] = "#1E5631";
+						}
+					}
+					skinsOwned[4] = "#5579C6";
+				}
+				
+				if(character.color == "#964B00"){
+					for(var c = 0; c < skinsOwned.length; c++){
+						if(skinsOwned[c] == "#5579C6"){
+							skinsOwned[c] = "#1E5631";
+						}
+					}
+					skinsOwned[5] = "#5579C6";
+				}
+				if(character.color == "#b9f2ff"){
+					for(var c = 0; c < skinsOwned.length; c++){
+						if(skinsOwned[c] == "#5579C6"){
+							skinsOwned[c] = "#1E5631";
+						}
+					}
+					skinsOwned[6] = "#5579C6";
+				}
+				if(character.color == "silver"){
+					for(var c = 0; c < skinsOwned.length; c++){
+						if(skinsOwned[c] == "#5579C6"){
+							skinsOwned[c] = "#1E5631";
+						}
+					}
+					skinsOwned[7] = "#5579C6";
+				}
+				if(character.color == "white"){
+					for(var c = 0; c < skinsOwned.length; c++){
+						if(skinsOwned[c] == "#5579C6"){
+							skinsOwned[c] = "#1E5631";
+						}
+					}
+					skinsOwned[8] = "#5579C6";
+				}
+				if(character.color == "gold"){
+					for(var c = 0; c < skinsOwned.length; c++){
+						if(skinsOwned[c] == "#5579C6"){
+							skinsOwned[c] = "#1E5631";
+						}
+					}
+					skinsOwned[9] = "#5579C6";
+				}
+			}
+			function locker(){
+				ctx.fillStyle = "skyblue";
+				ctx.fillRect(0,0,900,900);
+				checkSkinEquipped();
+				
+				ctx.fillStyle = "#D2B48C";
+				ctx.fillRect(140,10,200,75);
+				ctx.fillRect(350,10,200,75);
+				ctx.fillRect(560,10,200,75);
+				ctx.fillStyle = "#DCCA98";
+				ctx.fillRect(145,15,190,65);
+				ctx.fillRect(355,15,190,65);
+				ctx.fillRect(565,15,190,65);
+				ctx.fillStyle = "black";
+				ctx.textAlign = "center";
+				ctx.font = "25px DotGothic16";
+				ctx.fillText("Launcher(1)",240, 55);
+				ctx.fillText("How to Play(2)",450, 55);
+				ctx.fillText("Controls(3)",660, 55);
+				
+				ctx.font = "100px DotGothic16";
+				ctx.fillText("LOCKER",450, 190);
+				
+				ctx.font = "20px DotGothic16";
+				ctx.fillStyle = skinsOwned[0];
+				ctx.fillText("FREE(Y)", 150, 240);
+				ctx.fillRect(122, 247, 56, 56);
+				ctx.fillStyle = "yellow";
+				ctx.fillRect(125, 250, 50, 50);	
+				
+				ctx.font = "20px DotGothic16";
+				ctx.fillStyle = skinsOwned[1];
+				ctx.fillText("FREE(B)", 300, 340);
+				ctx.fillRect(272, 347, 56, 56);
+				ctx.fillStyle = "blue";
+				ctx.fillRect(275, 350, 50, 50);
+				
+				ctx.font = "20px DotGothic16";
+				ctx.fillStyle = skinsOwned[2];
+				ctx.fillText("PLAY A GAME(R)", 450, 240);
+				ctx.fillRect(422, 247, 56, 56);
+				ctx.fillStyle = "red";
+				ctx.fillRect(425, 250, 50, 50);
+				if(gamesPlayed > 0){
+					skinsOwned[2] = "#1E5631";
+				}
+				
+				ctx.font = "20px DotGothic16";
+				ctx.fillStyle = skinsOwned[3];
+				ctx.fillText("COLLECT A COIN(G)", 600, 340);
+				ctx.fillRect(572, 347, 56, 56);
+				ctx.fillStyle = "forestgreen";
+				ctx.fillRect(575, 350, 50, 50);
+				if(totalCoins > 0){
+					skinsOwned[3] = "#1E5631";
+				}
+				
+				ctx.font = "20px DotGothic16";
+				ctx.fillStyle = skinsOwned[4];
+				ctx.fillText("GAIN 50XP(O)", 750, 240);
+				ctx.fillRect(722, 247, 56, 56);
+				ctx.fillStyle = "orange";
+				ctx.fillRect(725, 250, 50, 50);
+				if(character.xp >= 55){
+					skinsOwned[4] = "#1E5631";
+				}
+				ctx.font = "20px DotGothic16";
+				ctx.fillStyle = skinsOwned[5];
+				ctx.fillText("100 Games Played(6)", 150, 440);
+				ctx.fillRect(122, 447, 56, 56);
+				ctx.fillStyle = "#964B00";
+				ctx.fillRect(125, 450, 50, 50);	
+				if(gamesPlayed >= 100){
+					skinsOwned[5] = "#1E5631";
+				}
+				
+				ctx.font = "20px DotGothic16";
+				ctx.fillStyle = skinsOwned[6];
+				ctx.fillText("5000 COINS(7)", 300, 540);
+				ctx.fillRect(272, 547, 56, 56);
+				ctx.fillStyle = "#b9f2ff";
+				ctx.fillRect(275, 550, 50, 50);
+				if(totalCoins >= 5000){
+					skinsOwned[6] = "#1E5631";
+				}
+				
+				ctx.font = "20px DotGothic16";
+				ctx.fillStyle = skinsOwned[7];
+				ctx.fillText("500 GAMES PLAYED(8)", 450, 440);
+				ctx.fillRect(422, 447, 56, 56);
+				ctx.fillStyle = "silver";
+				ctx.fillRect(425, 450, 50, 50);
+				if(gamesPlayed >= 500){
+					skinsOwned[7] = "#1E5631";
+				}
+				
+				ctx.font = "20px DotGothic16";
+				ctx.fillStyle = skinsOwned[8];
+				ctx.fillText("10000 WINS(9)", 600, 540);
+				ctx.fillRect(572, 547, 56, 56);
+				ctx.fillStyle = "white";
+				ctx.fillRect(575, 550, 50, 50);
+				if(wins >= 10000){
+					skinsOwned[8] = "#1E5631";
+				}
+				
+				ctx.font = "20px DotGothic16";
+				ctx.fillStyle = skinsOwned[9];
+				ctx.fillText("1000 LEVELS(0)", 750, 440);
+				ctx.fillRect(722, 447, 56, 56);
+				ctx.fillStyle = "gold";
+				ctx.fillRect(725, 450, 50, 50);
+				if(character.level >= 1000){
+					skinsOwned[9] = "#1E5631";
+				}
+				
+				ctx.drawImage(gp1, 125, 450);
+				ctx.drawImage(gc1, 275, 550);
+				ctx.drawImage(gp2, 425, 450);
+				ctx.drawImage(gw1, 575, 550);
+				ctx.drawImage(gp3, 725, 450);
+				
+				ctx.fillStyle = "black";
+				ctx.font = "20px DotGothic16";
+				ctx.fillText("In the locker, the colored/patterned boxes are your skins.", 450, 700);
+				ctx.fillText(" By playing the game, raising your XP, and getting coins, you can buy these skins.", 450, 730);
+				ctx.fillText("Each skin will have different colored border.", 450, 760);
+				ctx.fillText("If the border is GREEN, then the skin is unlocked.", 450, 790);
+				ctx.fillText("You can equip this skin by clicked the letter next to it.", 450, 820);
+				ctx.fillText("If the border is BLUE, that skin is equiped.", 450, 850);
+				ctx.fillText("If the border is RED, that skin has not been unlocked yet.", 450, 880);
+				
+				if(keys[49]){
+					showLocker = false;
+					showControls = false;
+					showPlay = false;
+					keys[49] = false;
+				}
+				if(keys[50]){
+					showLocker = false;
+					showControls = false;
+					showPlay = true;
+					keys[50] = false;
+				}
+				if(keys[51]){
+					showLocker = false;
+					showControls = true;
+					showPlay = false;
+					keys[51] = false;
+				}
+			}
+			
+			//how to play
+			var showPlay = false;
+			function play(){
+				ctx.fillStyle = "skyblue";
+				ctx.fillRect(0,0,900,900);
+				
+				ctx.fillStyle = "#D2B48C";
+				ctx.fillRect(140,10,200,75);
+				ctx.fillRect(350,10,200,75);
+				ctx.fillRect(560,10,200,75);
+				ctx.fillStyle = "#DCCA98";
+				ctx.fillRect(145,15,190,65);
+				ctx.fillRect(355,15,190,65);
+				ctx.fillRect(565,15,190,65);
+				ctx.fillStyle = "black";
+				ctx.textAlign = "center";
+				ctx.font = "25px DotGothic16";
+				ctx.fillText("Locker(1)",240, 55);
+				ctx.fillText("Launcher(2)",450, 55);
+				ctx.fillText("Controls(3)",660, 55);
+				
+				ctx.font = "100px DotGothic16";
+				ctx.fillText("How To Play",450, 190);
+				
+				ctx.font = "30px DotGothic16";
+				ctx.fillText("WELCOME TO DUEL.io!",450, 250);
+				ctx.fillText("DUEL.io is a fast paced multiplayer game",450, 290);
+				ctx.fillText("where you shoot the other player to win!", 450, 325);
+				
+				ctx.fillText("During the round, you use your mouse cursor to aim where", 450, 365);
+				ctx.fillText("you want to shoot.", 450, 400);
+				
+				ctx.fillText("You can also pick up ammo, health kits, and coins.", 450, 440);
+				ctx.fillText("The more matches you play,the more XP you can get!", 450, 480);
+				ctx.fillText("TIP: The more coins you collect = more XP per match", 450, 520);
+				ctx.fillText("Once you finish your match, you can use", 450, 560);
+				ctx.fillText("your coins and other resources to get skins!", 450, 595);
+				
+				ctx.fillText("your coins and other resources to get skins!", 450, 595);
+				ctx.fillText("HAVE FUN!", 450, 635);
+				
+				ctx.fillText("Any Questions?", 450, 750);
+				ctx.fillText("Email duel.io.help@gmail.com", 450, 790);
+				
+				if(keys[50]){
+					showLocker = false;
+					showControls = false;
+					showPlay = false;
+					keys[50] = false;
+				}
+				if(keys[49]){
+					showLocker = true;
+					showControls = false;
+					showPlay = false;
+					keys[49] = false;
+				}
+				if(keys[51]){
+					showLocker = false;
+					showControls = true;
+					showPlay = false;
+					keys[51] = false;
+				}
+			}
+			
+			//controls
+			var showControls = false;
+			function controls(){
+				ctx.fillStyle = "skyblue";
+				ctx.fillRect(0,0,900,900);
+				
+				ctx.fillStyle = "#D2B48C";
+				ctx.fillRect(140,10,200,75);
+				ctx.fillRect(350,10,200,75);
+				ctx.fillRect(560,10,200,75);
+				ctx.fillStyle = "#DCCA98";
+				ctx.fillRect(145,15,190,65);
+				ctx.fillRect(355,15,190,65);
+				ctx.fillRect(565,15,190,65);
+				ctx.fillStyle = "black";
+				ctx.textAlign = "center";
+				ctx.font = "25px DotGothic16";
+				ctx.fillText("Locker(1)",240, 55);
+				ctx.fillText("How to Play(2)",450, 55);
+				ctx.fillText("Launcher(3)",660, 55);
+				
+				ctx.font = "100px DotGothic16";
+				ctx.fillText("Controls",450, 190);
+				
+				ctx.font = "30px DotGothic16";
+				ctx.fillText("W - UP",450, 350);
+				ctx.fillText("A - LEFT",450, 390);
+				ctx.fillText("S - DOWN",450, 430);
+				ctx.fillText("D - RIGHT",450, 470);
+				ctx.fillText("MOUSE CURSOR- WHERE YOU SHOOT",450, 510);
+				ctx.fillText("LSHIFT - DASH",450, 550);
+				
+				if(keys[51]){
+					showLocker = false;
+					showControls = false;
+					showPlay = false;
+					keys[51] = false;
+				}
+				if(keys[50]){
+					showLocker = false;
+					showControls = false;
+					showPlay = true;
+					keys[50] = false;
+				}
+				if(keys[49]){
+					showLocker = true;
+					showControls = false;
+					showPlay = false;
+					keys[49] = false;
+				}
+			}
+			
+			//endscreen
+			var statsX = 450 - 200;
+			var statsY = -500;
+			var textX = -1200;
+			var textY = 150;
+			var randomNum = -100;
+			var xpIncrease;
+			function endGame(){
+				if(enemy.health <= 0){
+					enemy.health = -10000;
+					if(randomNum == -100){
+						randomNum = Math.floor(Math.random() * 10);	
+						xpIncrease = gameCoins + randomNum + 5;
+						character.xp += xpIncrease;
+					}
+					playKeyUp = false;
+					ctx.fillStyle = "skyblue";
+					ctx.fillRect(0,0,900,900);
+					ctx.fillStyle = "#DCCA98";
+					ctx.fillRect(0,750,900,50);
+					ctx.fillStyle = "#D2B48C";
+					ctx.fillRect(0,800,900,100);
+					ctx.fillRect(statsX, statsY, 400,370);
+					ctx.fillStyle = "yellow";
+					ctx.font = "100px DotGothic16";
+					ctx.fillText("Victory Royale!",textX, textY);
+					ctx.fillStyle = "Black";
+					ctx.font = "bold 40px DotGothic16";
+					ctx.fillText("Match Stats",statsX + 200, statsY + 55);
+					
+					ctx.textAlign = "left"
+					ctx.font = "25px DotGothic16";
+					ctx.fillStyle = "black";
+					ctx.fillRect(statsX + 200 - 72,statsY + 100,154,24);
+					ctx.fillStyle = "yellow"
+					ctx.fillRect(statsX + 200 - 72 + 2,statsY + 102,character.xp,20);
+					ctx.fillStyle = "black";
+					ctx.font = "25px DotGothic16";
+					ctx.textAlign = "left";
+					ctx.fillText("Level: " + character.level, statsX + 130, statsY + 90);
+					
+					ctx.fillText("Coins: " + gameCoins, statsX + 130, statsY + 165);
+					ctx.fillText("XP: +" + xpIncrease, statsX + 130, statsY + 205);
+					
+					ctx.fillStyle = "yellow";
+					ctx.textAlign = "center";
+					ctx.fillRect(statsX + 100, statsY + 245, 200, 75);
+					ctx.fillStyle = "black";
+					ctx.font = "25px DotGothic16";
+					ctx.fillText("Go To Laucher", statsX + 200, statsY + 280);
+					ctx.font = "15px DotGothic16";
+					ctx.fillText("(Press Enter)", statsX + 200, statsY + 300);
+					
+					
+					if(statsY + 500 < 700){
+						statsY += 3;
+					}
+					if(textX < 450){
+						textX += 5;
+					}
+					if(keys[13]){
+						startGame = false;	
+						wins += 1;
+					}
+				}
+				if(character.health <= 0){
+					enemy.health = -10000;
+					if(randomNum == -100){
+						randomNum = Math.floor(Math.random() * 5);	
+						xpIncrease = gameCoins + randomNum + 1;
+						character.xp += xpIncrease;
+					}
+					playKeyUp = false;
+					ctx.fillStyle = "skyblue";
+					ctx.fillRect(0,0,900,900);
+					ctx.fillStyle = "#DCCA98";
+					ctx.fillRect(0,750,900,50);
+					ctx.fillStyle = "#D2B48C";
+					ctx.fillRect(0,800,900,100);
+					ctx.fillRect(statsX, statsY, 400,370);
+					ctx.fillStyle = "red";
+					ctx.font = "100px DotGothic16";
+					ctx.fillText("You Placed 2nd :(",textX, textY);
+					ctx.fillStyle = "Black";
+					ctx.font = "bold 40px DotGothic16";
+					ctx.fillText("Match Stats",statsX + 200, statsY + 55);
+					
+					ctx.textAlign = "left"
+					ctx.font = "25px DotGothic16";
+					ctx.fillStyle = "black";
+					ctx.fillRect(statsX + 200 - 72,statsY + 100,154,24);
+					ctx.fillStyle = "yellow"
+					ctx.fillRect(statsX + 200 - 72 + 2,statsY + 102,character.xp,20);
+					ctx.fillStyle = "black";
+					ctx.font = "25px DotGothic16";
+					ctx.textAlign = "left";
+					ctx.fillText("Level: " + character.level, statsX + 130, statsY + 90);
+					
+					ctx.fillText("Coins: " + gameCoins, statsX + 130, statsY + 165);
+					ctx.fillText("XP: +" + xpIncrease, statsX + 130, statsY + 205);
+					
+					ctx.fillStyle = "yellow";
+					ctx.textAlign = "center";
+					ctx.fillRect(statsX + 100, statsY + 245, 200, 75);
+					ctx.fillStyle = "black";
+					ctx.font = "25px DotGothic16";
+					ctx.fillText("Go To Laucher", statsX + 200, statsY + 280);
+					ctx.font = "15px DotGothic16";
+					ctx.fillText("(Press Enter)", statsX + 200, statsY + 300);
+					
+					
+					if(statsY + 500 < 700){
+						statsY += 3;
+					}
+					if(textX < 450){
+						textX += 5;
+					}
+					if(keys[13]){
+						startGame = false;	
+						loses += 1;
+					}
+				}
+			}
+			
+			//gameloop
+			window.requestAnimationFrame(gameloop);
+			var gunAngle = 0;
+			var newPoint;
+			var negRec;
+			function gameloop(){
+				var gp1Pat = ctx.createPattern(gp1, "repeat");
+				var gp2Pat = ctx.createPattern(gp2, "repeat");
+				var gp3Pat = ctx.createPattern(gp3, "repeat");
+				var gc1Pat = ctx.createPattern(gc1, "repeat");
+				var gw1Pat = ctx.createPattern(gw1, "repeat");
+				if(startGame == false){
+					startMenu();
+				}
+				if(startGame == true){
+					var match = setInterval(function(){
+						time += 1/((gamesPlayed-1) * 2 + 1) * gamesPlayed;
+					}, 1500);
+					drawBackground();
+					drawForeGround();
+					enemyHealth();
+					if(time > 1000){
+						clearInterval(match);
+						generateMedkit();
+						generateAmmo();
+						generateCoin();
+						powerUps();
+						characterMovement();
+						dash();
+						enemyMovement();
+						enemyShoot();
+					}
+					startMatch();
+					drawEnemy();
+					
+					enemyRotateAngle = Math.atan2(-(island.y + enemy.y + enemy.height/2)+character.y+ character.height/2, -(island.x+enemy.x + enemy.width/2)+character.x+character.width/2);
+					rotateEnemyGun();
+					enemyGunAngle = Math.round(enemyRotateAngle * (180/Math.PI));
+					enemyNewPoint = findNewPoint(island.x+enemy.x+enemy.width/2, island.y+enemy.y+enemy.height/2, enemyGunAngle, 70);
+					enemyNegRec = findNewPoint(enemyNewPoint.x, enemyNewPoint.y, enemyGunAngle + 90, 43);
+					enemyDetectBullets();
+					
+					drawCharacter();
+					levelUp();
+
+					rotateAngle = Math.atan2(-(character.y + character.height/2)+mouseY, -(character.x + character.width/2)+mouseX);
+					rotateGun();
+					gunAngle = Math.round(rotateAngle * (180/Math.PI));
+					newPoint = findNewPoint(character.x+character.width/2, character.y+character.height/2, gunAngle, 70);
+					negRec = findNewPoint(newPoint.x, newPoint.y, gunAngle + 90, 43);
+					shoot();
+					detectBullets();	
+					
+					UI();
+					endGame();
+				}
+				
+				window.requestAnimationFrame(gameloop);
+			}
+			//event listeners
+			document.body.addEventListener("keydown", function (e) {
+				keys[e.keyCode] = true;
+			});
+			document.body.addEventListener("keyup", function (e) {
+				keys[e.keyCode] = false;
+			});
+			document.body.addEventListener("mousemove", function(e) {
+				mouseX = e.clientX - rect.left;
+				mouseY = e.clientY - rect.top;
+			});
+		</script>
+	</body>
+</html>
